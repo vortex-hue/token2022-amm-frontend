@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useContract } from '../hooks/useContract';
+import { openTokenInExplorer } from '../utils/explorer';
 
 interface PoolFormData {
   tokenAddress: string;
@@ -168,7 +169,10 @@ export const PoolCreator: React.FC = () => {
               <button onClick={resetForm} className="btn-primary flex-1">
                 Create Another Pool
               </button>
-              <button className="btn-secondary flex-1">
+              <button 
+                onClick={() => openTokenInExplorer(createdPool)}
+                className="btn-secondary flex-1"
+              >
                 View Pool
               </button>
             </div>

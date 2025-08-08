@@ -6,6 +6,7 @@ import { TokenCreator } from './components/TokenCreator';
 import { PoolCreator } from './components/PoolCreator';
 import { TradingInterface } from './components/TradingInterface';
 import { ContractStatus } from './components/ContractStatus';
+import { ContractInfo } from './components/ContractInfo';
 import { Footer } from './components/Footer';
 import { testContractConnection } from './utils/testContract';
 import './App.css';
@@ -91,6 +92,9 @@ function App() {
 
         {/* Contract Status */}
         <ContractStatus />
+
+        {/* Contract Info */}
+        <ContractInfo />
 
         {/* Navigation */}
         <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />

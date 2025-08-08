@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useContract } from '../hooks/useContract';
+import { openTransactionInExplorer } from '../utils/explorer';
 
 interface TradeData {
   fromToken: string;
@@ -40,16 +41,26 @@ export const TradingInterface: React.FC = () => {
   const [route, setRoute] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Mock tokens for demo
-  const mockTokens: TokenInfo[] = [
+  // Custom token management
+  const [customTokens, setCustomTokens] = useState<TokenInfo[]>([]);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customTokenAddress, setCustomTokenAddress] = useState('');
+
+  // Base tokens (SOL)
+  const baseTokens: TokenInfo[] = [
     {
       address: 'SOL',
       symbol: 'SOL',
       name: 'Solana',
       decimals: 9,
       balance: 50.25,
-      price: 105.67
-    },
+      price: 105.67,
+      isWhitelisted: true
+    }
+  ];
+
+  // Example tokens for demo
+  const exampleTokens: TokenInfo[] = [
     {
       address: 'COMP123abc',
       symbol: 'COMP',
@@ -69,6 +80,8 @@ export const TradingInterface: React.FC = () => {
       isWhitelisted: false
     }
   ];
+
+  const allTokens = [...baseTokens, ...customTokens, ...exampleTokens];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -147,7 +160,38 @@ export const TradingInterface: React.FC = () => {
   };
 
   const getTokenInfo = (address: string): TokenInfo | undefined => {
-    return mockTokens.find(token => token.address === address);
+    return allTokens.find(token => token.address === address);
+  };
+
+  const addCustomToken = async () => {
+    if (!customTokenAddress.trim()) return;
+    
+    try {
+      // Check if token already exists
+      if (allTokens.some(token => token.address === customTokenAddress)) {
+        setError('Token already added');
+        return;
+      }
+
+      // For demo purposes, create a mock token entry
+      // In a real app, you'd fetch token metadata from the blockchain
+      const newToken: TokenInfo = {
+        address: customTokenAddress,
+        symbol: `TKN${customTokens.length + 1}`,
+        name: 'Custom Token',
+        decimals: 6,
+        balance: 0,
+        price: 0.01,
+        isWhitelisted: await contractService.isWhitelisted(customTokenAddress)
+      };
+
+      setCustomTokens(prev => [...prev, newToken]);
+      setCustomTokenAddress('');
+      setShowCustomInput(false);
+      setError(null);
+    } catch (err) {
+      setError('Failed to add token: ' + (err as Error).message);
+    }
   };
 
   const fromTokenInfo = getTokenInfo(tradeData.fromToken);
@@ -216,7 +260,10 @@ export const TradingInterface: React.FC = () => {
               <button onClick={resetTrade} className="btn-primary flex-1">
                 Make Another Trade
               </button>
-              <button className="btn-secondary flex-1">
+              <button 
+                onClick={() => openTransactionInExplorer(tradeResult)}
+                className="btn-secondary flex-1"
+              >
                 View on Explorer
               </button>
             </div>
@@ -245,9 +292,10 @@ export const TradingInterface: React.FC = () => {
                 onChange={handleInputChange}
                 className="form-input pr-20"
               >
-                {mockTokens.map(token => (
+                {allTokens.map(token => (
                   <option key={token.address} value={token.address}>
                     {token.symbol} - {token.name}
+                    {token.isWhitelisted ? ' ✓' : ' ⚠️'}
                   </option>
                 ))}
               </select>
@@ -294,11 +342,12 @@ export const TradingInterface: React.FC = () => {
                 className="form-input pr-20"
               >
                 <option value="">Select token</option>
-                {mockTokens
+                {allTokens
                   .filter(token => token.address !== tradeData.fromToken)
                   .map(token => (
                     <option key={token.address} value={token.address}>
                       {token.symbol} - {token.name}
+                      {token.isWhitelisted ? ' ✓' : ' ⚠️'}
                     </option>
                   ))}
               </select>
@@ -350,6 +399,38 @@ export const TradingInterface: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* Custom Token Input */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="form-label">Custom Token</label>
+              <button
+                onClick={() => setShowCustomInput(!showCustomInput)}
+                className="text-sm text-primary-600 hover:text-primary-700"
+              >
+                {showCustomInput ? 'Cancel' : 'Add Token Address'}
+              </button>
+            </div>
+            
+            {showCustomInput && (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={customTokenAddress}
+                  onChange={(e) => setCustomTokenAddress(e.target.value)}
+                  placeholder="Enter token mint address (e.g., 4zdEwm...)"
+                  className="form-input font-mono text-sm"
+                />
+                <button
+                  onClick={addCustomToken}
+                  disabled={!customTokenAddress.trim()}
+                  className="btn-primary w-full text-sm py-2"
+                >
+                  Add Token
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Slippage Settings */}
           <div>

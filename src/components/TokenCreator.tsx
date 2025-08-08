@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useContract } from '../hooks/useContract';
+import { openTokenInExplorer } from '../utils/explorer';
 
 interface TokenFormData {
   name: string;
@@ -173,7 +174,10 @@ export const TokenCreator: React.FC = () => {
                 >
                   Create Another Token
                 </button>
-                <button className="btn-secondary flex-1">
+                <button 
+                  onClick={() => openTokenInExplorer(deployedToken)}
+                  className="btn-secondary flex-1"
+                >
                   View on Explorer
                 </button>
               </div>
