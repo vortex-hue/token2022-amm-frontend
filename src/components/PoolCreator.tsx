@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useContract } from '../hooks/useContract';
 
 interface PoolFormData {
   tokenAddress: string;
@@ -14,6 +16,9 @@ interface PoolFormData {
 }
 
 export const PoolCreator: React.FC = () => {
+  const { connected } = useWallet();
+  const contractService = useContract();
+  
   const [formData, setFormData] = useState<PoolFormData>({
     tokenAddress: '',
     solAmount: 10,
@@ -26,6 +31,7 @@ export const PoolCreator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [createdPool, setCreatedPool] = useState<string | null>(null);
   const [currentPrice, setCurrentPrice] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -50,14 +56,35 @@ export const PoolCreator: React.FC = () => {
   };
 
   const handleCreatePool = async () => {
+    if (!connected) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    if (!formData.tokenAddress || formData.solAmount <= 0 || formData.tokenAmount <= 0) {
+      setError('Please fill in all required fields with valid amounts');
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
     
-    // Simulate pool creation
-    setTimeout(() => {
-      const mockPoolAddress = `POOL${Math.random().toString(36).substr(2, 9)}`;
-      setCreatedPool(mockPoolAddress);
+    try {
+      const result = await contractService.createPool({
+        tokenAddress: formData.tokenAddress,
+        solAmount: formData.solAmount,
+        tokenAmount: formData.tokenAmount,
+        ammPlatform: formData.ammPlatform,
+        poolType: formData.poolType,
+        feeRate: formData.feeRate
+      });
+      
+      setCreatedPool(result.poolAddress);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setIsLoading(false);
-    }, 4000);
+    }
   };
 
   const resetForm = () => {

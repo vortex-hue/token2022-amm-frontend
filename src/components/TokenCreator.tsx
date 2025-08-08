@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useContract } from '../hooks/useContract';
 
 interface TokenFormData {
   name: string;
@@ -12,6 +14,9 @@ interface TokenFormData {
 }
 
 export const TokenCreator: React.FC = () => {
+  const { connected } = useWallet();
+  const contractService = useContract();
+  
   const [formData, setFormData] = useState<TokenFormData>({
     name: '',
     symbol: '',
@@ -25,6 +30,7 @@ export const TokenCreator: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [deployedToken, setDeployedToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -43,18 +49,35 @@ export const TokenCreator: React.FC = () => {
   };
 
   const handleCreateToken = async () => {
+    if (!connected) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
     
-    // Simulate token creation
-    setTimeout(() => {
-      const mockTokenAddress = `${formData.symbol}${Math.random().toString(36).substr(2, 9)}`;
-      setDeployedToken(mockTokenAddress);
+    try {
+      const result = await contractService.createToken({
+        name: formData.name,
+        symbol: formData.symbol,
+        decimals: formData.decimals,
+        supply: formData.supply,
+        enableTransferHook: formData.enableTransferHook,
+        enableWhitelist: formData.enableWhitelist
+      });
+      
+      setDeployedToken(result.mintAddress);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setIsLoading(false);
-    }, 3000);
+    }
   };
 
   const resetForm = () => {
     setDeployedToken(null);
+    setError(null);
     setFormData({
       name: '',
       symbol: '',
@@ -290,13 +313,37 @@ export const TokenCreator: React.FC = () => {
             </div>
           </div>
           
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="text-red-800 text-sm">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Wallet Connection Warning */}
+          {!connected && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="text-yellow-800 text-sm">Please connect your wallet to create tokens</span>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex space-x-4 pt-6 border-t">
             <button
               onClick={handleCreateToken}
-              disabled={isLoading || !formData.name || !formData.symbol}
+              disabled={isLoading || !formData.name || !formData.symbol || !connected}
               className={`btn-primary flex-1 ${
-                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                isLoading || !connected ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               {isLoading ? (
@@ -304,6 +351,8 @@ export const TokenCreator: React.FC = () => {
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Creating Token...</span>
                 </div>
+              ) : !connected ? (
+                'Connect Wallet to Create Token'
               ) : (
                 'Create Token'
               )}

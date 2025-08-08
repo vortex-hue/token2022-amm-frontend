@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WalletContextProvider } from './contexts/WalletProvider';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import { TokenCreator } from './components/TokenCreator';
 import { PoolCreator } from './components/PoolCreator';
 import { TradingInterface } from './components/TradingInterface';
+import { ContractStatus } from './components/ContractStatus';
 import { Footer } from './components/Footer';
+import { testContractConnection } from './utils/testContract';
 import './App.css';
 
 type ActiveTab = 'create-token' | 'create-pool' | 'trade';
 
 function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('create-token');
+
+  useEffect(() => {
+    // Test contract connection on app load
+    testContractConnection();
+  }, []);
 
   const renderActiveComponent = () => {
     switch (activeTab) {
@@ -81,6 +88,9 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* Contract Status */}
+        <ContractStatus />
 
         {/* Navigation */}
         <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />

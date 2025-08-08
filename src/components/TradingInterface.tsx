@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useContract } from '../hooks/useContract';
 
 interface TradeData {
   fromToken: string;
@@ -20,6 +22,9 @@ interface TokenInfo {
 }
 
 export const TradingInterface: React.FC = () => {
+  const { connected } = useWallet();
+  const contractService = useContract();
+  
   const [tradeData, setTradeData] = useState<TradeData>({
     fromToken: 'SOL',
     toToken: '',
@@ -33,6 +38,7 @@ export const TradingInterface: React.FC = () => {
   const [tradeResult, setTradeResult] = useState<string | null>(null);
   const [priceImpact, setPriceImpact] = useState<number>(0);
   const [route, setRoute] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Mock tokens for demo
   const mockTokens: TokenInfo[] = [
@@ -96,14 +102,34 @@ export const TradingInterface: React.FC = () => {
   };
 
   const handleTrade = async () => {
+    if (!connected) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    if (!tradeData.toToken || tradeData.fromAmount <= 0) {
+      setError('Please select tokens and enter valid amounts');
+      return;
+    }
+
     setIsLoading(true);
+    setError(null);
     
-    // Simulate trade execution
-    setTimeout(() => {
-      const mockTxHash = `TX${Math.random().toString(36).substr(2, 9)}`;
-      setTradeResult(mockTxHash);
+    try {
+      const result = await contractService.swapTokens({
+        fromTokenAddress: tradeData.fromToken,
+        toTokenAddress: tradeData.toToken,
+        fromAmount: tradeData.fromAmount,
+        slippage: tradeData.slippage,
+        route: route
+      });
+      
+      setTradeResult(result.transactionSignature);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setIsLoading(false);
-    }, 3000);
+    }
   };
 
   const resetTrade = () => {
