@@ -32,8 +32,14 @@ export class RealContractService {
   }
 
   public setProvider(provider: AnchorProvider) {
-    this.provider = provider;
-    this.program = new Program(IDL as any, provider);
+    try {
+      this.provider = provider;
+      this.program = new Program(IDL as any, provider);    } catch (error) {
+      console.error('Error setting provider:', error);
+      // Keep provider set but don't initialize program if there's an error
+      this.provider = provider;
+      this.program = null;
+    }
   }
 
   /**

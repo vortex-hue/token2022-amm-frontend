@@ -1,30 +1,35 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { useMemo } from 'react';
 import { AnchorProvider } from '@coral-xyz/anchor';
-import { RealContractService } from '../services/realContractService';
+import { getContractService, ContractService } from '../services/contractService';
 
-export const useContract = (): RealContractService => {
+export const useContract = (): ContractService => {
   const { connection } = useConnection();
   const { wallet, publicKey, signTransaction, signAllTransactions } = useWallet();
 
   const contractService = useMemo(() => {
-    const service = new RealContractService(connection);
+    const service = getContractService(connection);
     
+    // Only set provider if wallet is fully connected
     if (wallet && publicKey && signTransaction && signAllTransactions) {
-      const provider = new AnchorProvider(
-        connection,
-        {
-          publicKey,
-          signTransaction,
-          signAllTransactions
-        },
-        {
-          commitment: 'confirmed',
-          preflightCommitment: 'confirmed',
-        }
-      );
-      
-      service.setProvider(provider);
+      try {
+        const provider = new AnchorProvider(
+          connection,
+          {
+            publicKey,
+            signTransaction,
+            signAllTransactions
+          },
+          {
+            commitment: 'confirmed',
+            preflightCommitment: 'confirmed',
+          }
+        );
+        
+        service.setProvider(provider);
+      } catch (error) {
+        console.error('Error creating provider in useContract:', error);
+      }
     }
     
     return service;
